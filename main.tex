@@ -30,6 +30,9 @@
 %Including images in your LaTeX document requires adding
 %additional package(s)
 \usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amssymb}
 
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
@@ -37,6 +40,7 @@
 %
 % and set <dim> to something 5cm or larger.
 \newcommand{\corpus}{{\tt MemeFal}}
+\newcommand{\red}[1]{\textcolor{red}{#1}}
 \title{{\corpus}: Detecting Logical Fallacies of Arguments in Memes}
 
 % Author information can be set in various styles:
@@ -109,7 +113,7 @@
 \begin{abstract}
 Towards AI systems with advanced reasoning, informal logic processing is important. How to enable them to know if an argument is sound and reasonable? 
 % When there are errors in the reasoning, we call it logical fallacies.
-In this paper, propose the task of detecting logical fallacies in vision-language arguments: Given an argument for a claim using multiple premises, detect its logical fallacies if any.
+This paper proposes the task of detecting logical fallacies in vision-language arguments: Given an argument for a claim using multiple premises, detect its logical fallacies if any.
 To enable explainability and approach verifiability of labels, we require systems to fill in a logical form of a fallacy whenever they choose it.
 Because there has been no prior work on vision-language logical fallacies, we collected {\corpus}, the \textit{first} dataset for the task, comprising [1000] meme-based arguments annotated with the committed fallacies and their logical forms.
 Evaluating 15 open-source language models and 2 close source ones on \corpus\ shows that current systems are surprisingly good at [detecting appeal to emotion] but are pool at logos-based fallacies which involve being sharp about logic. {\corpus}, therefore, will serve as a testbed for informal logical reasoning of future AI systems in multimodal settings.
@@ -118,26 +122,121 @@ Evaluating 15 open-source language models and 2 close source ones on \corpus\ sh
 %%%%%%%%%%%%%%%% INTRODUCTION %%%%%%%%%%%%%%%%%
 \section{Introduction}
 
-Test
+Write last
 
 
 
 %%%%%%%%%%%%%%%% RELATED WORK %%%%%%%%%%%%%%%%%
 
+\section{Related Work}
+
+\red{Depends on the main focus on the paper, we will expand either the dataset part or the methods part.}
+
+% Start with textual logical fallacies. Cite those 11 papers and their taxonomies. Also cite their way of doing annotations and quality control.
+\paragraph{Fallacy Datasets.}
+Table~\ref{tab:datasets} summarizes existing fallacy datasets; we describe the most relevant ones here.
+Taxonomies vary widely---from single-type studies \citep{habernal_before_2018} to unified benchmarks spanning 23 types \citep{helwe_mafalda_2024}---reflecting the lack of community consensus on fallacy categorization.
+Collection methods range from gamification \citep{habernal_argotario_2017} and expert annotation of political debates \citep{goffredo_argument-based_2023} to LLM-assisted crowdsourcing \citep{yeh_cocolofa_2024} and synthetic generation \citep{li_reason_2024}.
+A consistent finding is that inter-annotator agreement is low regardless of annotator expertise: \citet{helwe_mafalda_2024} report human F1$\approx$35\% even among PhD-level NLP researchers.
+The only prior multimodal work is SemEval-2021 Task 6 \citep{dimitrov_semeval-2021_2021}, which targets persuasion techniques in memes and news images as a multilabel problem---a related but distinct task that does not require logical form annotation.
+\corpus{} is the first dataset to focus specifically on logical fallacies in vision-language arguments.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrll}
+\toprule
+\textbf{Dataset} & \textbf{Size} & \textbf{Types} & \textbf{Domain} & \textbf{Mod.} \\
+\midrule
+Argotario \citeyearpar{habernal_argotario_2017}        & 1,338  &  5 & Online debates    & T \\
+Ad Hominem \citeyearpar{habernal_before_2018}          & 2,085  &  1 & Reddit CMV        & T \\
+Reddit Fall. \citeyearpar{sahai_breaking_2021}         & 3,358  &  8 & Reddit            & T \\
+SemEval-21 T6 \citeyearpar{dimitrov_semeval-2021_2021} & 7,000+ & 22 & Memes/news        & T+I \\
+LOGIC \citeyearpar{jin_logical_2022}                   & 3,528  & 13 & Web/climate       & T \\
+ElecDeb \citeyearpar{goffredo_argument-based_2023}     & 2,000  &  6 & Political debates & T \\
+MAFALDA \citeyearpar{helwe_mafalda_2024}               & 9,545  & 23 & Mixed             & T \\
+CoCoLoFa \citeyearpar{yeh_cocolofa_2024}               & 7,706  &  8 & News comments     & T \\
+LFUD \citeyearpar{li_reason_2024}                      & 4,020  & 12 & Synthetic         & T \\
+SmartyPat \citeyearpar{xu_socrates_2026}               &   502  & 14 & Reddit            & T \\
+FAINA \citeyearpar{ramponi_fine-grained_2025}          & 11,000+& 20 & Social media (it) & T \\
+FALCON \citeyearpar{chaves_falcon_2025}                & —      &  6 & COVID tweets      & T \\
+\midrule
+\corpus{} (ours)                                       & [1000] & 21 & Memes             & T+I \\
+\bottomrule
+\end{tabular}
+\caption{Fallacy datasets. \textbf{Mod.}: T = text, I = image.}
+\label{tab:datasets}
+\end{table}
+
+% Then talk about methods to detect fallacies: tranformer baselines, structure-aware prompting, neuro-symbolic, finetune for explanation generation.
+\paragraph{Fallacy Detection Methods.}
+Early supervised methods fine-tune transformers, with \citet{sourati_logical_2023} achieving the strongest pre-LLM result (82.7\% macro F1 on LOGIC) via a prototype-network and case-based reasoning pipeline; however, cross-dataset transfer remains poor \citep{alhindi_multitask_2022}.
+Zero-shot LLM prompting \citep{pan_fallacies_2024} outperforms fine-tuned models out-of-distribution but lags in-distribution; structure-aware prompts that prepend logical trees \citep{lei_logical_2024} or contextual elaborations \citep{jeong_ceg_2025} close much of this gap.
+Neuro-symbolic approaches couple neural models with formal verifiers---FOL + SMT solving \citep{lalwani_nl2fol_2025} or Prolog-backed decomposition \citep{wang_aid-lf_2025}---catching fallacies that purely neural models miss.
+Finally, fine-tuning on structured fallacy explanations improves both detection and downstream reasoning \citep{li_reason_2024,hasanain_propxplain_2025}.
+
+% Move on to multimodal fallacies datasets. Then talk about whether approaches here differ.
+
+
+
 %%%%%%%%%%%%%%%% TASK %%%%%%%%%%%%%%%%%
+
+
+
+\section{Task Formulation}
+
+\subsection{Vision-Language Fallacies and Their Logical Forms}
+\red{Explain why choosing \citet{helwe_mafalda_2024}. Describe taxonomy change from MAFALDA. Emphasize the annotation of logical form to help with explanability and verifiability.}
+
+\subsection{Vision-Language Fallacy Detection (VLFD)}
+% \red{Explain the input at argument level}
+
+Let $W$ be the space of token sequences in the application language (English in this paper), $F$ be the set of 20 possible fallacies described above.
+% , and $\kappa: F \times \mathbb{N} \rightarrow \mathbb{N}$ be the function that a fallacy and an logical form index to the logical form's number of masks.
+
+Given an argumentative image $I$, the problem is to generate a list of quadruplets $(c_i, P_i, f_i, E_i)$ where $c_i \in W$ is a claim made by the image, $P_i = \{p_{i,1}, p_{i,2}, \ldots, p_{i,k_i}\}$ is the set of premises used by the image to support the claim $c_i$ ($p_{ij} \in W$), $f_i \in F$, and $E_i = \{e_{i,1}, e_{i,2}, \ldots, e_{i,l_i}$ be the set of explanations for the occurences of $f_i$ in the argument $(c_i, P_i)$ ($e_{i, j} \in W$).
+% $M_i = \{m_{i,1}, m_{i,2}, \ldots, m_{i,\kappa(f_i)}\}$ are the masks for the .
+
+Constraints:
+\begin{itemize}
+  \item {\bf Faithfulness.} All arguments ($c_i, P_i$) must be faithful to $I$. That means $c_i$ must be one of the claims being made in the meme, and $P_i$ must be the set of premises used to support $c_i$. 
+  \item {\bf Logical form adherence.} All explanations $e_{i, j}$ must follow the template of at least one logical form of $f_i$.
+  \item {\bf Multiple fallacies.} An argument can appear multiple times in the input if and only if commit multiple fallacies.
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%% DATASET %%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%% EXPERIMENTS %%%%%%%%%%%%%%%%%
+\section{Annotations}
+
+\subsection{Annotation Procedure}
+
+Fallacy annotation is a cognitively demanding task, where current advanced AI models can significant help by providing a {\it starting point}. For each argument, we used Gemini 3 Flash Preview with temperature=0.2 to pre-generate fallacy annotations. Then, two annotators annotated it across 21 fallacies. For every argument-fallacy instance where disagreement occurs, an expert breaks the tie by providing the third annotation. The gold label will then be the majority label.
+
+\red{Insert prompt for model, guidelines and interface for annotators, guidelines and interface for expert reviewer.}
+
+\subsection{Dataset Statistics and Analysis}
+
+%%%%%%%%%%%%%%%% EVALUATION %%%%%%%%%%%%%%%%%
+
+\section{Evaluation}
+
+\subsection{Metrics}
+
+\subsection{Settings}
+
+\subsection{Results and Analysis}
 
 %%%%%%%%%%%%%%%% CONCLUSION %%%%%%%%%%%%%%%%%
+\section{Conclusion}
 
-
-
+%%%%%%%%%%%%%%%% LIMITATIONS %%%%%%%%%%%%%%%%%
+\section*{Limitations}
 
 
 % Custom bibliography entries only
-% \bibliography{custom}
+\bibliography{custom}
 
 \appendix
 
